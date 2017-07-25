@@ -11,7 +11,7 @@ import UIKit
 class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UICollectionViewDelegate, UICollectionViewDataSource {
     
     var myCollectionView : UICollectionView!
-    var getData : Array<Any>!
+    var getData : Array<Dictionary <String,AnyObject>> = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,16 +28,20 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 do {
                     let json = try JSONSerialization.jsonObject(with: jsonData, options: JSONSerialization.ReadingOptions.allowFragments)
                     
-                    self.getData = json as! Array<Any>
+                    self.getData = json as! Array<Dictionary <String,AnyObject>>
+
+                    self.localDataSet(jsonData: json as! Array<Any>)
                     
-                    self.localDataSet(jsonData: self.getData)
+                    // collectionViewRenderが引き金になってtable listを描画する
+                    // collection系の操作はバックグランドで実行できないっぽい
+                    DispatchQueue.main.async(){
+                        self.collectionViewRender()
+                    }
                 } catch {
                     print(error) // パースに失敗したときにエラーを表示
                 }
             }
         }
-        
-        self.collectionViewRender()
     }
 
     override func didReceiveMemoryWarning() {
@@ -122,31 +126,28 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
      Cellの総数を返す
      */
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 30
+        return self.getData.count
     }
     
     /*
      Cellに値を設定する
      */
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        
         let cell : CustomUICollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: "MyCell", for: indexPath) as! CustomUICollectionViewCell
         
         // indexの番号をここで記述できる
 //        cell.textLabel?.text = indexPath.row.description
 //        cell.textLabel?.text = "superTest"
         
-        let image1 : UIImageView = imageFromUrl(urlString: "http://160.16.201.215:9001/test/testImg1.png")
-        let image2 : UIImageView = imageFromUrl(urlString: "http://160.16.201.215:9001/test/testImg2.png")
+        let headImage : UIImageView = imageFromUrl(urlString: self.getData[indexPath[1]]["url"] as! String)
         let getMark : UIImageView = imageFromUrl(urlString: "http://160.16.201.215:9001/test/getMark.png")
         
 //        image2.alpha = 0.4
-        
-        
+
 //        cell.contentView.insertSubview(getMark, belowSubview: image2)
         cell.contentView.addSubview(getMark)
         // getMarkの下に新しいSubviewが追加される
-        cell.contentView.insertSubview(image2, belowSubview: getMark)
+        cell.contentView.insertSubview(headImage, belowSubview: getMark)
         return cell
     }
     
@@ -163,6 +164,10 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     func localDataSet(jsonData: Array<Any>) {
         let defaults = UserDefaults.standard
         
+//        let testData : [String : AnyObject] = (self.getData[1] as! NSDictionary) as! [String : AnyObject]
+//        
+//        print(testData["name"])
+        
         for (index, _) in jsonData.enumerated()
         {
             let insertData : [String: AnyObject] = (jsonData[index] as! NSDictionary) as! [String : AnyObject]
@@ -178,9 +183,9 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
 
         let user = defaults.dictionary(forKey: "test2")
         
-        for (key, value) in user! {
-            print("key:\(key) value:\(value)")
-        }
+//        for (key, value) in user! {
+//            print("key:\(key) value:\(value)")
+//        }
     }
     
 }
