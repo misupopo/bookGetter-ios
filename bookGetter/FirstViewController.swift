@@ -8,10 +8,15 @@
 
 import UIKit
 
-class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UICollectionViewDelegate, UICollectionViewDataSource {
+class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UICollectionViewDelegate, UICollectionViewDataSource, URLSessionDownloadDelegate {
+    @available(iOS 7.0, *)
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+    }
     
     var myCollectionView : UICollectionView!
     var getData : Array<Dictionary <String,AnyObject>> = []
+    
+    var progressBar: UIProgressView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -146,9 +151,44 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
 
 //        cell.contentView.insertSubview(getMark, belowSubview: image2)
         cell.contentView.addSubview(getMark)
+
+        cell.contentView.addSubview(self.setDownloadButton(parentCell: cell, index: indexPath[1]))
+        
         // getMarkの下に新しいSubviewが追加される
         cell.contentView.insertSubview(headImage, belowSubview: getMark)
         return cell
+    }
+    
+    func setDownloadButton(parentCell: CustomUICollectionViewCell, index: Int) -> UIProgressView {
+        // ダウンロード開始ボタン
+//        let button = UIButton(type: .system)
+//        button.setTitle("ダウンロード開始", for: .normal)
+//        button.titleLabel?.font = UIFont(name: "Arial", size: 24)
+//        button.addTarget(self, action: #selector(self.startDownloadTask), for: .touchUpInside)
+//        button.sizeToFit()
+//        button.center = self.view.center
+//        self.view.addSubview(button)
+        
+        // プログレスバーの設定
+        progressBar = UIProgressView(progressViewStyle: .default)
+        progressBar.layer.position = CGPoint(x: 50, y: 50)
+//        progressBar.transform = progressBar.transform.scaledBy(x: 50, y: 50)
+        progressBar.transform = CGAffineTransform(scaleX: 0.5, y: 2)
+//        progressBar.widthAnchor.constraint(equalTo: progressBar.widthAnchor, multiplier: 1).isActive = true
+
+        return progressBar
+    }
+    
+    // バックグラウンドで動作する非同期通信
+    func startDownloadTask() {
+        
+        let sessionConfig = URLSessionConfiguration.background(withIdentifier: "myapp-background")
+        let session = URLSession(configuration: sessionConfig, delegate: self, delegateQueue: nil)
+        
+        let url = URL(string: "http://160.16.201.215:9001/test/testImg1.png")!
+        
+        let downloadTask = session.downloadTask(with: url)
+        downloadTask.resume()
     }
     
     func imageFromUrl(urlString: String) -> UIImageView {
@@ -181,9 +221,10 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     func localDataRead() {
         let defaults = UserDefaults.standard
 
-        let user = defaults.dictionary(forKey: "test2")
+        // データを呼び出し
+        let bookData = defaults.dictionary(forKey: "test2")
         
-//        for (key, value) in user! {
+//        for (key, value) in bookData! {
 //            print("key:\(key) value:\(value)")
 //        }
     }
