@@ -9,9 +9,6 @@
 import UIKit
 
 class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDataSource, UICollectionViewDelegate, UICollectionViewDataSource, URLSessionDownloadDelegate {
-    @available(iOS 7.0, *)
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-    }
     
     var myCollectionView : UICollectionView!
     var getData : Array<Dictionary <String,AnyObject>> = []
@@ -150,16 +147,50 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
 //        image2.alpha = 0.4
 
 //        cell.contentView.insertSubview(getMark, belowSubview: image2)
+//        cell.contentView.addSubview(getMark)
+        
+//        headImage.isUserInteractionEnabled = true
+        
+//        let tapTrigger: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(FirstViewController.setTestSuper(sender:)))
+        
+//        headImage.addGestureRecognizer(tapTrigger)
+        
+        var button = UIButton(type: .system)
+        button.addTarget(self, action: #selector(self.showDownloadBar(data:)), for: .touchUpInside)
+//        button.setTitle("ダウンロード開始", for: .normal)
+        button.titleLabel?.font = UIFont(name: "Arial", size: 24)
+//        button.sizeToFit()
+        
+        button.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+        
+        button.backgroundColor = UIColor.darkGray
+        
+//        button.alpha = 0.4
+        
+        let downloadBar = self.setDownloadButton(parentCell: cell, index: indexPath[1])
+        
+        // ダウンロード進捗バーを挿入
+        button.addSubview(downloadBar)
+        cell.contentView.addSubview(button)
         cell.contentView.addSubview(getMark)
-
-        cell.contentView.addSubview(self.setDownloadButton(parentCell: cell, index: indexPath[1]))
         
         // getMarkの下に新しいSubviewが追加される
-        cell.contentView.insertSubview(headImage, belowSubview: getMark)
+//        cell.contentView.insertSubview(headImage, belowSubview: getMark)
+//        cell.contentView.insertSubview(getMark, belowSubview: button)
         return cell
     }
     
-    func setDownloadButton(parentCell: CustomUICollectionViewCell, index: Int) -> UIProgressView {
+    func showDownloadBar(data: UIButton) {
+        for subview in data.subviews {
+            if(subview.isHidden) {
+                subview.isHidden = false
+            } else {
+                subview.isHidden = true
+            }
+        }
+    }
+    
+    func setDownloadButton(parentCell: CustomUICollectionViewCell?, index: Int?) -> UIProgressView {
         // ダウンロード開始ボタン
 //        let button = UIButton(type: .system)
 //        button.setTitle("ダウンロード開始", for: .normal)
@@ -189,6 +220,80 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         
         let downloadTask = session.downloadTask(with: url)
         downloadTask.resume()
+    }
+    
+    // ディレクトリを作成
+    func createDir(path: String) {
+        do {
+            let fileManager = Foundation.FileManager.default
+            try fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+        } catch let error as NSError {
+            print("createDir: \(error)")
+        }
+    }
+    
+    // 保存するディレクトリのパス
+    func getSaveDirectory() -> String {
+        
+        let fileManager = Foundation.FileManager.default
+        
+        // ライブラリディレクトリのルートパスを取得して、それにフォルダ名を追加
+        let path = NSSearchPathForDirectoriesInDomains(Foundation.FileManager.SearchPathDirectory.libraryDirectory, Foundation.FileManager.SearchPathDomainMask.userDomainMask, true)[0] + "/DownloadFiles/"
+        
+        // ディレクトリがない場合は作る
+        if !fileManager.fileExists(atPath: path) {
+            createDir(path: path)
+        }
+        
+        return path
+    }
+    
+    // 現在時刻からユニークな文字列を得る
+    func getIdFromDateTime() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+        return dateFormatter.string(from: Date())
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        // ダウンロード完了時の処理
+        
+        print("didFinishDownloading")
+        
+        do {
+            if let data = NSData(contentsOf: location) {
+                
+                let fileExtension = location.pathExtension
+                let filePath = getSaveDirectory() + getIdFromDateTime() + "." + fileExtension
+                
+                print(filePath)
+                
+                try data.write(toFile: filePath, options: .atomic)
+            }
+        } catch let error as NSError {
+            print("download error: \(error)")
+        }
+    }
+    
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        // ダウンロード進行中の処理
+        
+        let progress = Float(totalBytesWritten) / Float(totalBytesExpectedToWrite)
+        
+        // ダウンロードの進捗をログに表示
+        print(String(format: "%.2f", progress * 100) + "%")
+        
+        // メインスレッドでプログレスバーの更新処理
+        DispatchQueue.main.async(execute: {
+            self.progressBar.setProgress(progress, animated: true)
+        })
+    }
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        // ダウンロードエラー発生時の処理
+        if error != nil {
+            print("download error: \(error)")
+        }
     }
     
     func imageFromUrl(urlString: String) -> UIImageView {
